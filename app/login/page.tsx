@@ -1,51 +1,77 @@
 'use client'
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { loginUser } from '@/lib/auth';
 
-// ✅ Tambahkan ini
-const formSchema = z.object({
-  username: z.string().min(3),
-  password: z.string().min(6),
-});
-type FormData = z.infer<typeof formSchema>; // ✅ DEFINISIKAN TIPENYA
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(formSchema) });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const router = useRouter()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('user') // default user
+  const [error, setError] = useState('')
 
-  const onSubmit = (data: FormData) => {
-    setLoading(true);
-    const user = loginUser(data.username, data.password);
-    if (!user) {
-      setError('Username atau password salah');
-      setLoading(false);
-      return;
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!username || !password) {
+      setError('Username dan password harus diisi.')
+      return
     }
-    document.cookie = `token=${user.username}; path=/`; // Simpan username sebagai token dummy
-    document.cookie = `role=${user.role}; path=/`;
-    if (user.role === 'admin') router.push('/admin/dashboard');
-    else router.push('/user/articles');
-  };
+
+    // Simpan ke localStorage (bukan sessionStorage)
+    localStorage.setItem('username', username)
+    localStorage.setItem('role', role)
+
+    // Arahkan ke dashboard sesuai role
+    if (role === 'admin') {
+      router.push('/admin/dashboard')
+    } else {
+      router.push('/user/articles')
+    }
+  }
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gray-100">
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white shadow-md rounded-lg p-6 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-center mb-4">Login</h1>
-        <input {...register('username')} placeholder="Username" className="border px-3 py-2 w-full mb-2 rounded" />
-        {errors.username && <p className="text-sm text-red-500">{errors.username.message}</p>}
-        <input type="password" {...register('password')} placeholder="Password" className="border px-3 py-2 w-full mb-2 rounded" />
-        {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
-        {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
-        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded">
-          {loading ? 'Loading...' : 'Login'}
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white p-6 rounded shadow-md w-full max-w-sm space-y-4"
+      >
+        <h2 className="text-xl font-bold text-center">Login</h2>
+
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="w-full border px-4 py-2 rounded"
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full border px-4 py-2 rounded"
+        />
+
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          className="w-full border px-4 py-2 rounded"
+        >
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+        >
+          Login
         </button>
       </form>
     </div>
-  );
+  )
 }
